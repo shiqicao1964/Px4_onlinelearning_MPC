@@ -1,0 +1,8 @@
+prefix=/home/shiqi/catkin_ws/install
+
+Name: reference_publisher
+Description: Description of reference_publisher
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

@@ -1,0 +1,1 @@
+/home/shiqi/catkin_ws/devel/.private/offboard_py/lib/pkgconfig/offboard_py.pc

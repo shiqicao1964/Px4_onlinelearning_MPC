@@ -1,0 +1,1 @@
+/home/shiqi/catkin_ws/devel/.private/reference_publisher/share/reference_publisher/cmake/reference_publisherConfig.cmake

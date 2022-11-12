@@ -1,0 +1,1 @@
+/home/shiqi/catkin_ws/devel/.private/reference_publisher/lib/pkgconfig/reference_publisher.pc

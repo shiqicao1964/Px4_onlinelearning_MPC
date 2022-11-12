@@ -1,0 +1,119 @@
+[33m[1mCMake Warning[0m at /opt/ros/melodic/share/catkin/cmake/catkin_package.cmake:166 (message):
+  catkin_package() DEPENDS on 'system_lib' but neither
+  'system_lib_INCLUDE_DIRS' nor 'system_lib_LIBRARIES' is defined.
+[36mCall Stack (most recent call first):[0m
+  /opt/ros/melodic/share/catkin/cmake/catkin_package.cmake:102 (_catkin_package)
+  CMakeLists.txt:103 (catkin_package)
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:176 (add_executable):
+  Cannot find source file:
+
+    src/nmpc_guidance.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:208 (add_executable):
+  Cannot find source file:
+
+    src/nmpc_guidance5.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:200 (add_executable):
+  Cannot find source file:
+
+    src/nmpc_guidance4.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:158 (add_executable):
+  Cannot find source file:
+
+    src/nmpc_low_level.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:149 (add_executable):
+  Cannot find source file:
+
+    src/acados_mpc.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:167 (add_executable):
+  Cannot find source file:
+
+    src/nmpc_pf.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:184 (add_executable):
+  Cannot find source file:
+
+    src/nmpc_guidance2.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:192 (add_executable):
+  Cannot find source file:
+
+    src/nmpc_guidance3.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:216 (add_executable):
+  Cannot find source file:
+
+    src/nmpc_guidance_ca.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/shiqi/catkin_ws/src/offboard_py/CMakeLists.txt:224 (add_executable):
+  Cannot find source file:
+
+    src/nmpc_guidance_ca1.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+
+
+CMake Error: CMake can not determine linker language for target: nmpc_guidance
+CMake Error: Cannot determine link language for target "nmpc_guidance".
+CMake Error: CMake can not determine linker language for target: nmpc_guidance5
+CMake Error: Cannot determine link language for target "nmpc_guidance5".
+CMake Error: CMake can not determine linker language for target: nmpc_guidance4
+CMake Error: Cannot determine link language for target "nmpc_guidance4".
+CMake Error: CMake can not determine linker language for target: nmpc_low_level
+CMake Error: Cannot determine link language for target "nmpc_low_level".
+CMake Error: CMake can not determine linker language for target: acados_mpc
+CMake Error: Cannot determine link language for target "acados_mpc".
+CMake Error: CMake can not determine linker language for target: nmpc_pf
+CMake Error: Cannot determine link language for target "nmpc_pf".
+CMake Error: CMake can not determine linker language for target: nmpc_guidance2
+CMake Error: Cannot determine link language for target "nmpc_guidance2".
+CMake Error: CMake can not determine linker language for target: nmpc_guidance3
+CMake Error: Cannot determine link language for target "nmpc_guidance3".
+CMake Error: CMake can not determine linker language for target: nmpc_guidance_ca
+CMake Error: Cannot determine link language for target "nmpc_guidance_ca".
+CMake Error: CMake can not determine linker language for target: nmpc_guidance_ca1
+CMake Error: Cannot determine link language for target "nmpc_guidance_ca1".
+make: *** [cmake_check_build_system] Error 1

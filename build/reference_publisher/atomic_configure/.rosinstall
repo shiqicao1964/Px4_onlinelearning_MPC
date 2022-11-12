@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/shiqi/catkin_ws/devel/.private/reference_publisher/setup.sh

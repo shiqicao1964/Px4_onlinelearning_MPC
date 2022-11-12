@@ -1,0 +1,6 @@
+devel_space: /home/shiqi/catkin_ws/devel
+install: false
+install_space: /home/shiqi/catkin_ws/install
+profile: default
+source_space: /home/shiqi/catkin_ws/src
+workspace: /home/shiqi/catkin_ws
