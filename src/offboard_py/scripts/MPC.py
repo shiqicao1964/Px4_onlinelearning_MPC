@@ -125,8 +125,8 @@ def linear_quad_model():
 def acados_settinngs(solver_options = None,t_horizon = 1,N = 20):
     
     my_quad = px4_quad()
-    q_cost = np.array([5, 5, 5, 0.1, 0.1, 0.1, 1, 1, 1, 1, 1, 1])
-    r_cost = np.array([0, 0, 0, 0])
+    q_cost = np.array([12, 12, 12, 2, 2, 2, 0.5, 0.5, 0.5, 1, 1, 1])
+    r_cost = np.array([0.5, 0.5, 0.5, 0.5])
     
     
     
@@ -187,18 +187,16 @@ def acados_settinngs(solver_options = None,t_horizon = 1,N = 20):
 
 
 
-def run_solver(N,model,acados_solver,initial_state,x_target):
+def run_solver(N,model,acados_solver,initial_state,ref):
     
     ## set reference_state 
     
-    u_target = [0.183,0.183,0.183,0.183]
-    u_target = [0,0,0,0]
-    ref = np.concatenate([x_target[i] for i in range(4)])
     
-    ref = np.concatenate((ref, u_target))
+    u_target = np.zeros((N+1,4))
+    ref = np.concatenate((ref, u_target),axis = 1)
     for j in range(N):
-        acados_solver.set(j, "yref", ref)
-    acados_solver.set(N, "yref", ref[:-4])
+        acados_solver.set(j, "yref", ref[j])
+    acados_solver.set(N, "yref", ref[N][:-4])
     
     # Set initial state.
     x_init = initial_state
@@ -219,7 +217,6 @@ def run_solver(N,model,acados_solver,initial_state,x_target):
     r_next = x_next[11]	
 
     return vx_next,vy_next,vz_next,p_next,q_next,r_next
-
 
 
 
