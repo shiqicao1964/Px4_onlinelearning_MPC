@@ -122,18 +122,33 @@ def linear_quad_model():
 
     return model
 
-def acados_settinngs(solver_options = None,t_horizon = 1,N = 20):
+def DT_linear_model(dT):
+    model = linear_quad_model()
+    x = model.x
+    u = model.u
+
+    ode = cs.Function('ode',[x, u], [model.f_expl_expr])
+
+    # set up Rk4
+    k1 = ode(x,       u)
+    k2 = ode(x+dT/2*k1,u)
+    k3 = ode(x+dT/2*k2,u)
+    k4 = ode(x+dT*k3,  u)
+    xf = x + dT/6 * (k1 + 2*k2 + 2*k3 + k4)
+
+    model.disc_dyn_expr = xf
+    return model
+    
+def acados_settinngs(solver_options = None,t_horizon = 1,N = 20,dT = 1/10):
     
     my_quad = px4_quad()
+
+    acados_models = DT_linear_model(dT)
+    
     q_cost = np.array([12, 12, 12, 2, 2, 2, 0.5, 0.5, 0.5, 1, 1, 1])
     r_cost = np.array([0.5, 0.5, 0.5, 0.5])
+     
     
-    
-    
-    acados_models = linear_quad_model()
-
-    
-
 
     nx = acados_models.x.size()[0]
     nu = acados_models.u.size()[0]
@@ -177,10 +192,9 @@ def acados_settinngs(solver_options = None,t_horizon = 1,N = 20):
     # Solver options
     ocp.solver_options.qp_solver = 'FULL_CONDENSING_HPIPM'
     ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
-    ocp.solver_options.integrator_type = 'ERK'
+    ocp.solver_options.integrator_type = 'DISCRETE'
     ocp.solver_options.print_level = 0
-    ocp.solver_options.nlp_solver_type = 'SQP_RTI' if solver_options is None else solver_options["solver_type"]
-
+    ocp.solver_options.nlp_solver_type = 'SQP_RTI'
     acados_solver = AcadosOcpSolver(ocp, json_file='acados_ocp.json')
 
     return acados_solver
@@ -188,9 +202,6 @@ def acados_settinngs(solver_options = None,t_horizon = 1,N = 20):
 
 
 def run_solver(N,model,acados_solver,initial_state,ref):
-    
-    ## set reference_state 
-    
     
     u_target = np.zeros((N+1,4))
     ref = np.concatenate((ref, u_target),axis = 1)
