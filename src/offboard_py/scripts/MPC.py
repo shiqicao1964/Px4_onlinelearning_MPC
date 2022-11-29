@@ -226,9 +226,18 @@ def run_solver(N,model,acados_solver,initial_state,ref):
     p_next = x_next[9]
     q_next = x_next[10]
     r_next = x_next[11]	
+    control = acados_solver.get(0, "u")
 
-    return vx_next,vy_next,vz_next,p_next,q_next,r_next
+    return vx_next,vy_next,vz_next,p_next,q_next,r_next,control
 
+def solve_DT_nextState(model,input_u ,current_x):
+    x = model.x
+    u = model.u
+    xf = model.disc_dyn_expr
+    DTsolution = cs.Function('f',[u,x],[xf])
+    result = DTsolution(input_u,current_x)
+
+    return result
 
 
 
