@@ -7,6 +7,7 @@ from sensor_msgs.msg import Imu
 from std_msgs.msg import Bool
 from mavros_msgs.srv import CommandBool, CommandBoolRequest, SetMode, SetModeRequest
 import numpy as np
+from collections import deque
 from math import sqrt
 import matplotlib
 import matplotlib.pyplot as plt
@@ -14,7 +15,7 @@ from function_1 import print_inf
 import math
 
 from acados_template import AcadosOcp, AcadosOcpSolver, AcadosModel
-from MPC import acados_settinngs, linear_quad_model, run_solver
+from MPC import acados_settinngs, linear_quad_model, run_solver, DT_linear_model, solve_DT_nextState
 current_state = State()
 pos_1 = PoseStamped()
 V_1 = TwistStamped()
@@ -90,10 +91,10 @@ if __name__ == "__main__":
     # set MPC 
     t_horizon = 10
     N = 20 # number of optimization nodes until time horizon
-    model = linear_quad_model()
-    acados_solver = acados_settinngs(t_horizon = t_horizon,N=N)
     
-
+    acados_solver = acados_settinngs(t_horizon = t_horizon,N=N,dT = t_horizon/N )
+    model = DT_linear_model(dT = t_horizon/N)
+    
     # Setpoint publishing MUST be faster than 2Hz
     Hz = 20
     rate = rospy.Rate(Hz)
@@ -108,8 +109,7 @@ if __name__ == "__main__":
     yawing = True
     v_max = 4
     v_average = 4
-    sim_t = 25
-
+    sim_t = 30
     t_speedup = v_average/lin_acc
     t_speeddown = t_speedup
     t_uniform_circular = sim_t - t_speedup*2
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     # Wait for Flight Controller connection
     while(not rospy.is_shutdown() and not current_state.connected):
         rate.sleep()
-
+    # set publisher variables
     pose = PoseStamped()
     vel = Twist()
     flag = Bool()
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     pose.pose.position.z = 3
 
     # Send a few setpoints before starting
-    for i in range(100):   
+    for i in range(10):   
         if(rospy.is_shutdown()):
             break
 
@@ -173,11 +173,24 @@ if __name__ == "__main__":
 
     last_req = rospy.Time.now()
 
-    k=0
+    # set init variables
+    k=0  # control flag
+    X_last = 0
+    Y_last = 0
     Z_last = 0
-    iindex = 0
-    pos_record = np.zeros((vel_traj_x.shape[0],3))
+    # set move average window init 
+    window_Vx = deque([0,0,0,0,0])
+    window_Vy = deque([0,0,0,0,0])
+    window_Vz = deque([0,0,0,0,0])
 
+    # set init index and record array size
+    iindex = 0
+    control_input = np.zeros(4)
+    pos_record = np.zeros((vel_traj_x.shape[0],3))
+    model_predict_record = np.zeros((12,vel_traj_x.shape[0]))
+    measurements_record = np.zeros((12,vel_traj_x.shape[0]))
+    current_states = np.zeros(12)
+    # main loop 
     while(not rospy.is_shutdown()):
         if(current_state.mode != "OFFBOARD" and (rospy.Time.now() - last_req) > rospy.Duration(5.0)):
             if(set_mode_client.call(offb_set_mode).mode_sent == True):
@@ -192,26 +205,39 @@ if __name__ == "__main__":
                 last_req = rospy.Time.now()
         
 
-
+        # measure states
         roll,pitch,yaw = euler_from_quaternion(pos_1.pose.orientation.x,
             pos_1.pose.orientation.y,pos_1.pose.orientation.z,pos_1.pose.orientation.w)
+
         Xc = pos_1.pose.position.x
         Yc = pos_1.pose.position.y
         Zc = pos_1.pose.position.z
-        Vxc = V_1.twist.linear.x
-        Vyc = V_1.twist.linear.y
+        Vxc = (Xc - X_last)*Hz
+        Vyc = (Yc - Y_last)*Hz
         Vzc = (Zc - Z_last)*Hz
+
+        # FIFO V into buffer for low pass filter
+        window_Vx.appendleft(Vxc)
+        window_Vx.pop()
+        window_Vy.appendleft(Vyc)
+        window_Vy.pop()
+        window_Vz.appendleft(Vzc)
+        window_Vz.pop()
+
+        Vx_mean = np.mean(window_Vx)
+        Vy_mean = np.mean(window_Vy)
+        Vz_mean = np.mean(window_Vz)
+
         Wxc = IMU_data.angular_velocity.x
         Wyc = IMU_data.angular_velocity.y
         Wzc = IMU_data.angular_velocity.z
+        
+        X_last = Xc
+        Y_last = Yc
         Z_last = Zc
 
-        current_states = np.array(
-            [Xc, Yc, Zc] + [roll, pitch, yaw] + [Vxc, Vyc, Vzc] + [Wxc, Wyc, Wzc]
-        )
-        
-        if (k < 400):
-
+        if (k < 400 or k > 500):
+            
             local_pos_pub.publish(pose)
             start_pub.publish(flag)
             k=k+1
@@ -219,7 +245,16 @@ if __name__ == "__main__":
             
             target = ref[iindex:iindex+N + 1]
             if target.shape[0] == N+1:
-                vx,vy,vz,p,q,r = run_solver(N=N,model=model,
+                
+                # use last measurement and control inputs to predict current using DT model   
+                DT_result = solve_DT_nextState(model,control_input ,current_states)
+                # get measurement as current states 
+                current_states = np.array(
+                [Xc, Yc, Zc] + [roll, pitch, yaw] + [Vx_mean, Vy_mean, Vz_mean] + [Wxc, Wyc, Wzc]
+                )
+
+
+                vx,vy,vz,p,q,r,control_input= run_solver(N=N,model=model,
                 acados_solver=acados_solver,initial_state = current_states,
                 ref=target)
                 vel.linear.x = vx
@@ -229,18 +264,28 @@ if __name__ == "__main__":
                 vel.angular.y = 0
                 vel.angular.z = 0
 
-                pos_record[iindex][0] = Xc
-                pos_record[iindex][1] = Yc
-                pos_record[iindex][2] = Zc
+                pos_record[iindex][:] = np.array([Xc, Yc, Zc])
+                model_predict_record[:,iindex] = np.array(DT_result).T.squeeze(0)
+                measurements_record[:,iindex] = current_states
+
                 iindex = iindex + 1
                 setvel.publish(vel)
-                start_pub.publish(flag)
                 
             else:
                 np.savetxt('data/posrecord.out',pos_record,delimiter=',')
-                print('data saved  ! ')
-                break
+
+                np.savetxt('data/model_predict_record.out',model_predict_record,delimiter=',')
+                np.savetxt('data/measurements_record.out',measurements_record,delimiter=',')
+                print('==========================================================')
+                print('===================data saved  ! =========================')
+                print('==========================================================')
+                k = 501
         rate.sleep()
+
+        
+
+        '''
+        print(Vx_mean)
 
         print('x is:')
         print(pos_1.pose.position.x)
@@ -248,7 +293,7 @@ if __name__ == "__main__":
         print(pos_1.pose.position.y)
         print('z is:')
         print(pos_1.pose.position.z)
-        '''
+
         print('k is : ')
         print(k)
         #print_inf(pos_1,k,V_1,IMU_data)
@@ -262,20 +307,12 @@ if __name__ == "__main__":
         print(roll)
         print(pitch)
         print(yaw)
-        print('Vx Vy Vz')
-        print(V_1.twist.linear.x)
-        print(V_1.twist.linear.y)
-        print(Vzc)
+        
         print(IMU_data.angular_velocity.x)
         print(IMU_data.angular_velocity.y)
         print(IMU_data.angular_velocity.z)
 
-                fig = plt.figure()
-                ax = fig.add_subplot(111, projection='3d')
-                ax.plot(pos_record[:iindex,0],pos_record[:iindex,1],pos_record[:iindex,2])
-                ax.plot(pos_traj_x[:iindex],pos_traj_y[:iindex],pos_traj_z[:iindex])
-                plt.show()
-
 
         '''
+
 
