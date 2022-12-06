@@ -1,0 +1,20 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import casadi as cs
+from casadi.casadi import *
+import math 
+from scipy.optimize import minimize
+from math import sqrt
+
+
+Kstar = cs.SX.sym('Kstar', 3 ,1)
+error = cs.SX.sym('error', 1 ,3)
+zj = np.ones((3,1))
+zi = x
+L = np.diag(np.ones(  3  ) * 2)
+L = L**2
+for i in range(3):
+    for j in range(1):
+
+        Kstar[i,j] = 1**2 * cs.exp(   -cs.mtimes(    cs.mtimes( (zi-zj).T  ,  np.linalg.inv(L)   ) ,    (zi-zj)  )   / 2 ) 
+error =  cs.mtimes(Kstar.T,np.ones((3,3)) )
