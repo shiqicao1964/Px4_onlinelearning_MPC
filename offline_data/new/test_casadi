@@ -18,3 +18,29 @@ for i in range(3):
 
         Kstar[i,j] = 1**2 * cs.exp(   -cs.mtimes(    cs.mtimes( (zi-zj).T  ,  np.linalg.inv(L)   ) ,    (zi-zj)  )   / 2 ) 
 error =  cs.mtimes(Kstar.T,np.ones((3,3)) )
+
+
+
+
+
+def fit(X,y,l,sig_f):
+    print(X.shape[0])
+    L = np.diag(np.ones(  X.shape[0]  ) * l)
+    L = L**2
+
+    K = kernel(X,X,sig_f,l)
+    error = cs.MX.sym('error',y.shape[0],1)
+    x = cs.MX.sym('x',X.shape[0],1)
+    
+    x1 = x.T
+    x2 = X.T
+    print(cs.sum2(x1**2).shape)
+    print(cs.sum2(x2**2).shape)
+    print((cs.sum2(x1**2) + cs.sum2(x2**2)).shape)
+    print('xx')
+    print((cs.mtimes(x1, x2.T)).shape)
+    dist_matrix = cs.sum2(x1**2) + cs.sum2(x2**2) - ((cs.mtimes(x1, x2.T))*2).T
+    Kstar = (sig_f ** 2 * np.exp(-0.5 / l ** 2 * dist_matrix)).T
+    error = cs.mtimes ( cs.mtimes(Kstar,np.linalg.inv(K) ), y.T ).T
+    
+    return error,x
