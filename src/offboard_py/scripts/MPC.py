@@ -12,8 +12,8 @@ from math import sqrt
 import math 
 from casadi.casadi import *
 import time
-from tqdm import trange
-from scipy.optimize import minimize
+
+
 class px4_quad:
     def __init__(self):
         # Quadrotor intrinsic parameters
@@ -22,7 +22,7 @@ class px4_quad:
 
         # Length of motor to CoG segment
         self.length = 0.47 / 2  # m
-        self.max_thrust = 10
+        self.max_thrust = 20
         self.g = np.array([[0], [0], [9.81]])  # m s^-2
         h = np.cos(np.pi / 4) * self.length
         self.x_f = np.array([h, -h, -h, h])
@@ -31,122 +31,11 @@ class px4_quad:
         self.z_l_tau = np.array([-self.c, self.c, -self.c, self.c])
 
         # Input constraints
-        self.max_input_value = 1  # Motors at full thrust
+        self.max_input_value = 2  # Motors at full thrust
         self.min_input_value = 0  # Motors turned off
         self.min_u = self.min_input_value
         self.max_u = self.max_input_value
 
-def eight_trag(speed = 3,x_w = 3,y_w = 4,z_w = 0,H = 5,dT = 0.05,sim_t = 100):
-    t_abl = [0]
-    t = np.linspace(0, 2*np.pi, num=10000)
-    x = x_w * np.cos(t) / (1 + np.sin(t)**2)
-    y = y_w * np.sin(t) * np.cos(t) / (1 + np.sin(t)**2)
-    z = H + z_w*np.cos(t)
-    x0 = x_w * np.cos(0) / (1 + np.sin(0)**2)
-    y0 = y_w * np.sin(0) * np.cos(0) / (1 + np.sin(0)**2)
-    z0 = H + z_w*np.cos(0)
-
-    for n in range(len(t)):
-        # calculate if dist == dT * speed
-        dist = math.sqrt((x[n]-x0)**2 + (y[n]-y0)**2 + (z[n]-z0)**2)
-        if dist > dT * speed:
-            t_abl.append(t[n])
-            x0 = x[n]
-            y0 = y[n]
-            z0 = z[n]
-    t_new = np.array(t_abl)
-    T_onecircle = len(t_new)*dT
-    circles = int(np.ceil(sim_t/T_onecircle))
-  
-    t_abl = [0]
-    vx = []
-    vy = []
-    vz = []
-    t = np.linspace(0, circles*2*np.pi, num=10000*circles)
-    x = x_w * np.cos(t) / (1 + np.sin(t)**2)
-    y = y_w * np.sin(t) * np.cos(t) / (1 + np.sin(t)**2)
-    z = H + z_w*np.cos(t)
-    x0 = x_w * np.cos(0) / (1 + np.sin(0)**2)
-    y0 = y_w * np.sin(0) * np.cos(0) / (1 + np.sin(0)**2)
-    z0 = H + z_w*np.cos(0)
-    for n in range(len(t)):
-        # calculate if dist == dT * speed
-        dx = x[n]-x0
-        dy = y[n]-y0
-        dz = z[n]-z0
-        dist = math.sqrt((dx)**2 + (dy)**2 + (dz)**2)
-        if dist > dT * speed:
-            t_abl.append(t[n])
-            vx.append( dx * speed / dist )
-            vy.append( dy * speed / dist )
-            vz.append( dz * speed / dist )
-            x0 = x[n]
-            y0 = y[n]
-            z0 = z[n]
-    t_new = np.array(t_abl)
-    x = x_w * np.cos(t_new) / (1 + np.sin(t_new)**2)
-    y = y_w * np.sin(t_new) * np.cos(t_new) / (1 + np.sin(t_new)**2)
-    z =  H + z_w*np.cos(t_new)
-    vx = np.array(vx)
-    vy = np.array(vy)
-    vz = np.array(vz)
-    return x[:-1], y[:-1], z[:-1],t_new,vx,vy,vz,T_onecircle
-
-def ellipse_trag(speed = 3,x_w = 3,y_w = 4,z_w = 0,H = 5,dT = 0.05,sim_t = 100):
-    t_abl = [0]
-    t = np.linspace(0, 2*np.pi, num=10000)
-    x = x_w * np.cos(t) 
-    y = y_w * np.sin(t)
-    z = H + z_w*np.cos(t)
-    x0 = x_w * np.cos(0) 
-    y0 = y_w * np.sin(0) 
-    z0 = H + z_w*np.cos(0)
-
-    for n in range(len(t)):
-        # calculate if dist == dT * speed
-        dist = math.sqrt((x[n]-x0)**2 + (y[n]-y0)**2 + (z[n]-z0)**2)
-        if dist > dT * speed:
-            t_abl.append(t[n])
-            x0 = x[n]
-            y0 = y[n]
-            z0 = z[n]
-    t_new = np.array(t_abl)
-    T_onecircle = len(t_new)*dT
-    circles = int(np.ceil(sim_t/T_onecircle))
-  
-    t_abl = [0]
-    vx = []
-    vy = []
-    vz = []
-    t = np.linspace(0, circles*2*np.pi, num=10000*circles)
-    x = x_w * np.cos(t) 
-    y = y_w * np.sin(t) 
-    z = H + z_w*np.cos(t)
-    x0 = x_w * np.cos(0) 
-    y0 = y_w * np.sin(0) 
-    z0 = H + z_w*np.cos(0)
-    for n in range(len(t)):
-        # calculate if dist == dT * speed
-        dx = x[n]-x0
-        dy = y[n]-y0
-        dz = z[n]-z0
-        dist = math.sqrt((dx)**2 + (dy)**2 + (dz)**2)
-        if dist > dT * speed:
-            t_abl.append(t[n])
-            vx.append( dx * speed / dist )
-            vy.append( dy * speed / dist )
-            vz.append( dz * speed / dist )
-            x0 = x[n]
-            y0 = y[n]
-            z0 = z[n]
-    t_new = np.array(t_abl)
-    x = x_w * np.cos(t_new) 
-    y = y_w * np.sin(t_new)
-    z =  H + z_w*np.cos(t_new)
-    vx = np.array(vx)
-    vy = np.array(vy)
-    vz = np.array(vz)
-    return x[:-1], y[:-1], z[:-1],t_new,vx,vy,vz,T_onecircle
 
 
 def linear_quad_model():
@@ -184,20 +73,20 @@ def linear_quad_model():
 
     #q_dynamics
     angle_dynamics = cs.vertcat(
-        p+r*pitch+q*roll*pitch,
-        q-r*roll,
-        r+q*roll)
+        p+r*(cs.cos(roll) * cs.tan(pitch))+q*(cs.sin(roll)*cs.tan(pitch)),
+        q*cs.cos(roll) - r*cs.sin(roll),
+        r*(cs.cos(roll)/cs.cos(pitch)) + q * (cs.sin(roll)/cs.cos(pitch)))
 
     # v_dynamics
-    g = -9.8
+    g = -9.81
     ft = (u1 + u2 + u3 + u4)*my_quad.max_thrust
     taux = (u3 - u1)*my_quad.max_thrust*my_quad.length
     tauy = (u4 - u2)*my_quad.max_thrust*my_quad.length
     tauz = (u2 + u4 - u1 - u3)*my_quad.max_thrust*my_quad.length
     v_dynamics = cs.vertcat(
-        r*vy-q*vz-g*pitch,
-        p*vz-r*vx+g*roll,
-        q*vx-p*vy + g + ft/my_quad.mass)
+        r*vy-q*vz-g*cs.sin(pitch),
+        p*vz-r*vx+g*cs.sin(roll)*cs.cos(pitch),
+        q*vx-p*vy + g*cs.cos(pitch)*cs.cos(roll) + ft/my_quad.mass)
     #w_dynamics 
     w_dynamics = cs.vertcat(
             (my_quad.J[1] - my_quad.J[2])/my_quad.J[0] * r * q + taux/my_quad.J[0],
@@ -250,59 +139,7 @@ def kernel(x1, x2,sigf,l):
     dist_matrix = np.sum(x1**2, 1).reshape(-1, 1) + np.sum(x2**2, 1) - 2 * np.dot(x1, x2.T)
     return sigf ** 2 * np.exp(-0.5 / l ** 2 * dist_matrix)
 
-def y_hat(X,y,query_slot_index,sigf,l) :
-    query_point = X[:,query_slot_index]
-    traian_setX = np.delete(X, query_slot_index, axis=1)
-    train_sety = np.delete(y, query_slot_index, axis=1)
-    
-    Ks = kernel(query_point,traian_setX,sigf,l)
-    Kxxinv = np.linalg.inv( kernel(traian_setX,traian_setX,sigf,l))
-    
-    y_hat = np.dot ( np.dot(  Ks ,Kxxinv ), train_sety.T ).T
-    return y_hat
 
-
-def error_square(X,y,query_slot_index,sigf,l):
-    Validation_y = y[:,query_slot_index]
-    error_square = sum (sum ((y_hat(X,y,query_slot_index,sigf,l) - Validation_y)**2))
-    return error_square
-
-def RMS (X,y,sigf,l,slot_number):
-    totalRMS = 0
-    slot_size = int(X.shape[1]/slot_number)
-    for i in range(slot_number):
-        query_slot_index = np.array(range(i*slot_size,(i+1)*slot_size  ))
-        i_RMS = error_square(X,y,query_slot_index,sigf,l)
-        totalRMS += i_RMS
-    return totalRMS
-class GPR:
-    def __init__(self, optimize=True):
-        self.is_fit = False
-        self.train_X, self.train_y = None, None
-        self.params = {"l": 0.3, "sigma_f": 0.2}
-        self.optimize = optimize
-    def kernel(self, x1, x2):
-        dist_matrix = np.sum(x1**2, 1).reshape(-1, 1) + np.sum(x2**2, 1) - 2 * np.dot(x1, x2.T)
-        return self.params["sigma_f"] ** 2 * np.exp(-0.5 / self.params["l"] ** 2 * dist_matrix)
-    
-    def fit(self, X, y,bounds_):
-        # store train data
-        self.train_X = np.asarray(X)
-        self.train_y = np.asarray(y)
-        self.params['sigma_f'] = np.std(y)
-         # hyper parameters optimization
-        def negative_log_likelihood_loss(params):
-            self.params["l"]= params
-            Kyy = self.kernel(self.train_X, self.train_X) #+ 1e-8 * np.eye(len(self.train_X))
-            loss = 0.5 * self.train_y.T.dot(np.linalg.inv(Kyy)).dot(self.train_y) + 0.5 * np.linalg.slogdet(Kyy)[1] + 0.5 * len(self.train_X) * np.log(2 * np.pi)
-            return np.sum(loss.ravel())
-
-        if self.optimize:
-            res = minimize(negative_log_likelihood_loss, [self.params["l"]],
-                   bounds=bounds_,
-                   method='L-BFGS-B')
-            self.params["l"] = res.x[0]
-        self.is_fit = True
 def DT_gp_model(dT,name,predict,measurement,control,total_buff_size):
     model = linear_quad_model()
     x = model.x
@@ -322,97 +159,46 @@ def DT_gp_model(dT,name,predict,measurement,control,total_buff_size):
     x1 = (measurement[:,0:-1])
     x2 = (control[:,0:-1])
     input_state = np.concatenate(( x1 , x2 ), axis=0)
-    error_y = (measurement[:,1:] - predict[:,1:])
-    # use 50 points in GP 
-    down_sample_factor = int(total_buff_size / 50 )
+    error_y = (measurement[:,1:] - predict[:,1:])[6:9,:]
+    # use 100 points in GP 
+    down_sample_factor = int(total_buff_size / 100 )
     input_state = input_state[:,::down_sample_factor]
     error_y = error_y[:,::down_sample_factor]
 
-    # find optimal L 
-    gpr1 = GPR()
-    gpr1c = GPR()
-    gpr1.fit(input_state.T,error_y[[6],:].T , [(0.1, 1.2)] )
-    gpr1c.fit(input_state.T,error_y[[6],:].T , [(0.1, 10)] )
-
-    gpr2 = GPR()
-    gpr2c = GPR()
-    gpr2.fit(input_state.T,error_y[[7],:].T , [(0.1, 1.2)] )
-    gpr2c.fit(input_state.T,error_y[[7],:].T , [(0.1, 10)] )
-
-    gpr3 = GPR()
-    gpr3c = GPR()
-    gpr3.fit(input_state.T,error_y[[2,8],:].T ,[(0.1, 1.2)] )
-    gpr3c.fit(input_state.T,error_y[[2,8],:].T ,[(0.1, 10)] )
-
-    gpr4 = GPR()
-    gpr4c = GPR()
-    gpr4.fit(input_state.T,error_y[[2],:].T ,[(0.1, 1.2)] )
-    gpr4c.fit(input_state.T,error_y[[2],:].T ,[(0.1, 10)] )
-
-    # use optimal L train GP error model
-    l_1 = gpr1.params['l']
-    sig_f_1 = gpr1.params['sigma_f']
-    X = input_state
-    Y = error_y[[6],:]
-    error_1 = fit_gp(sig_f_1,l_1,X,Y,x,u)
-
-    l_2 = gpr2.params['l']
-    sig_f_2 = gpr2.params['sigma_f']
-    X = input_state
-    Y = error_y[[7],:]
-    error_2 = fit_gp(sig_f_2,l_2,X,Y,x,u)
-
-    l_3 = gpr3.params['l']
-    sig_f_3 = gpr3.params['sigma_f']
-    X = input_state
-    Y = error_y[[2,8],:]
-    error_3 = fit_gp(sig_f_3,l_3,X,Y,x,u)
-
-    l_4 = gpr4.params['l']
-    sig_f_4 = gpr4.params['sigma_f']
-    X = input_state
-    Y = error_y[[2],:]
-    error_4 = fit_gp(sig_f_4,l_4,X,Y,x,u)
-
-    error_1 = cs.vertcat(cs.MX([0,0,0,0,0,0]),error_1,cs.MX([0,0]),cs.MX([0,0,0]))
-    error_2 = cs.vertcat(cs.MX([0,0,0,0,0,0,0]),error_2,cs.MX([0]),cs.MX([0,0,0]))
-    error_3 = cs.vertcat(cs.MX([0,0]),error_3[0],cs.MX([0,0,0,0,0]),error_3[1],cs.MX([0,0,0]))
-    #error_4 = cs.vertcat(cs.MX([0,0]),error_4,cs.MX([0,0,0,0,0,0]),cs.MX([0,0,0]))
-
-    print('=======================================================================')
-    print('============================fit result ================================')
-    print('=======================================================================')
-    print(f'l_1:',l_1,'sig_f_1:',sig_f_1 ,'     correct L', gpr1c.params['l'])
-    print(f'l_2:',l_2,'sig_f_2:',sig_f_2 ,'     correct L', gpr2c.params['l'])
-    print(f'l_3:',l_3,'sig_f_3:',sig_f_3 ,'     correct L', gpr3c.params['l'])
-    print(f'l_4:',l_4,'sig_f_4:',sig_f_4 ,'     correct L', gpr4c.params['l'])
-    print('input_state.shape',input_state.shape)
+    sig_f = np.std(error_y)
+    print(input_state.shape)
+    print(error_y.shape)
     
-    print('down_sample_factor',down_sample_factor)
-    print('size of train set:',error_y.shape)
-    print('time for fit GP model',time.time() - t0)
-    print('=======================================================================')
-    print('=======================================================================')
-    print('=======================================================================')
-
-    model.disc_dyn_expr = xf + error_1 + error_2 + error_3
-    return model
-
-def fit_gp(sig_f,l,X,Y,x,u):
+    X = input_state
+    Y = error_y
+    l = np.genfromtxt('Final_train_set/length_scale.out',delimiter=',') / (6 / down_sample_factor)
+    print('length_scale:', l)
     K = kernel(X,X,sig_f,l)
+    #print('x',x.shape)
+    #print('u',u.shape)
+    #print('x + u',cs.vertcat(x,u))
+    #print('x + u',cs.vertcat(x,u).shape)
     x1 = cs.vertcat(x,u).T
     x2 = X.T
     dist_matrix = cs.sum2(x1**2) + cs.sum2(x2**2) - ((cs.mtimes(x1, x2.T))*2).T
     Kstar = (sig_f ** 2 * np.exp(-0.5 / l ** 2 * dist_matrix)).T
     error = cs.mtimes ( cs.mtimes(Kstar,np.linalg.inv(K) ), Y.T ).T
-    return error
+    error = cs.vertcat(cs.MX([0,0,0,0,0,0]),error,cs.MX([0,0,0]))
+    print('====================fit========================')
+    print('length-scale:',l)
+    print('sig-f:',sig_f)
+    print('size of train set:',error_y.shape)
+    print('time for fit GP model',time.time() - t0)
+    model.disc_dyn_expr = xf + error
+    return model
+
     
 def acados_settinngs(acados_models,solver_options = None,t_horizon = 1,N = 20,build=True, generate=True):
     
     my_quad = px4_quad()
     
-    q_cost = np.array([20, 20, 22, 2, 2, 2, 0.5, 0.5, 0.5, 1, 1, 1])
-    r_cost = np.array([0.1, 0.1, 0.1, 0.1])
+    q_cost = np.array([15, 15, 15, 1, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 1])
+    r_cost = np.array([0.5, 0.5, 0.5, 0.5])
      
     nx = acados_models.x.size()[0]
     nu = acados_models.u.size()[0]
@@ -439,7 +225,7 @@ def acados_settinngs(acados_models,solver_options = None,t_horizon = 1,N = 20,bu
 
     ocp.cost.W = np.diag(np.concatenate((q_cost, r_cost)))
     ocp.cost.W_e = np.diag(q_cost)
-    ocp.cost.W_e *= 0
+    ocp.cost.W_e *= 1
 
 
     # Initial reference trajectory (will be overwritten)
@@ -458,13 +244,11 @@ def acados_settinngs(acados_models,solver_options = None,t_horizon = 1,N = 20,bu
     # Solver options
     ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
     ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
-    ocp.solver_options.hpipm_mode =  'BALANCE'           #'SPEED'
     ocp.solver_options.integrator_type = 'DISCRETE'
     ocp.solver_options.print_level = 0
     ocp.solver_options.nlp_solver_type = 'SQP_RTI'
-    ocp.solver_options.regularize_method = 'PROJECT'
-    ocp.solver_options.qp_solver_warm_start = 1
-    ocp.solver_options.nlp_solver_max_iter = 10
+    ocp.solver_options.regularize_method = 'CONVEXIFY'
+    ocp.solver_options.nlp_solver_max_iter = 20
     t1 = time.time()
     acados_solver = AcadosOcpSolver(ocp, json_file='acados_ocp.json',build=build, generate=generate)
     print('=============================FINISHED nonlinear_LS ACADOS SOLVER SETTINGS ===========================')
@@ -491,7 +275,7 @@ def run_solver(N,model,acados_solver,initial_state,ref):
     # Solve OCP
     acados_solver.solve()
     # get vx vy vz 
-    x_next = acados_solver.get(6, "x")
+    x_next = acados_solver.get(10, "x")
     vx_next = x_next[6]
     vy_next = x_next[7]
     vz_next = x_next[8]
@@ -499,11 +283,6 @@ def run_solver(N,model,acados_solver,initial_state,ref):
     q_next = x_next[10]
     r_next = x_next[11]	
     control = acados_solver.get(0, "u")
-    time_tot = acados_solver.get_stats('time_tot')
-    sqp_iter = acados_solver.get_stats('sqp_iter')
-    #print('cpu time',time_tot)
-    #print('sqp_iter',sqp_iter)
-
     return vx_next,vy_next,vz_next,p_next,q_next,r_next,control
 
 def solve_DT_nextState(model,input_u ,current_x):
@@ -514,7 +293,6 @@ def solve_DT_nextState(model,input_u ,current_x):
     result = DTsolution(input_u,current_x)
 
     return result
-
 
 
 
